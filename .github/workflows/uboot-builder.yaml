@@ -1,0 +1,114 @@
+name: U-Boot Builder PanelLan ZX7981PD
+
+permissions:
+  contents: write
+
+on:
+  workflow_dispatch:
+
+env:
+  REPO_URL: https://github.com/hanwckf/bl-mt798x
+  REPO_BRANCH: master
+  UBOOT_VERSION: 202307
+  UPLOAD_FIRMWARE: true
+  UPLOAD_RELEASE: true
+  TZ: Asia/Kuala_Lumpur
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Initialization environment
+      env:
+        DEBIAN_FRONTEND: noninteractive
+      run: |
+        sudo apt update
+        sudo apt install -y gcc-aarch64-linux-gnu build-essential flex bison libssl-dev device-tree-compiler python-is-python3
+        sudo timedatectl set-timezone "$TZ"
+
+    - name: Clone source code
+      run: |
+        git clone --depth 1 $REPO_URL -b $REPO_BRANCH bl-mt798x
+
+    - name: Append custom device definition
+      run: |
+        cd bl-mt798x
+        # Copying your specific PanelLan defconfig and dts files
+        cp ../uboot-mod/mt7981_panellan_zx7981pd_multi_layout_defconfig ./uboot-mtk-20230718-09eda825/configs/
+        cp ../uboot-mod/mt7981-panellan-zx7981pd.dts ./uboot-mtk-20230718-09eda825/arch/arm/dts/
+        cp ../uboot-mod/index.html ./uboot-mtk-20230718-09eda825/failsafe/fsdata/index.html
+
+    - name: Compile U-Boot
+      id: compile
+      run: |
+        cd bl-mt798x
+        # The BOARD variable maps exactly to your defconfig naming scheme
+        SOC=mt7981 BOARD=panellan_zx7981pd_multi_layout MULTI_LAYOUT=1 ./build.sh
+        if ls output/*.bin >/dev/null 2>&1;
+        then
+          echo "status=success" >> $GITHUB_OUTPUT
+        else
+          echo "status=failure" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Organize files
+      id: organize
+      if: steps.compile.outputs.status == 'success'
+      run: |
+        cd bl-mt798x/output
+        # Rename the output file to signify the multi-layout capability
+        for f in *.bin;
+        do
+          mv "$f" "${f%.bin}-multi-layout.bin"
+        done
+        md5sum *.bin > checksum
+        echo "FIRMWARE=$PWD" >> $GITHUB_ENV
+
+    - name: Upload bin directory
+      uses: actions/upload-artifact@main
+      if: steps.compile.outputs.status == 'success' && env.UPLOAD_FIRMWARE == 'true'
+      with:
+        name: U-Boot-PanelLan-ZX7981PD(Multi-Layout)
+        path: bl-mt798x/output
+
+    - name: Generate release tag and notes
+      id: release
+      if: env.UPLOAD_RELEASE == 'true' && !cancelled()
+      run: |
+        set -e
+        cd bl-mt798x/output
+
+        # Generate base information
+        BUILD_TIME=$(date +"%Y%m%d%H%M")
+        RELEASE_NAME="UBoot-${BUILD_TIME}"
+        echo "release_tag=$RELEASE_NAME" >> $GITHUB_OUTPUT
+        echo "🧱 Release name: $RELEASE_NAME"
+
+        # Generate release note
+        echo "## U-Boot for PanelLan ZX7981PD (Multi-Layout)" > release.txt
+        echo "- Branch: ${REPO_BRANCH}" >> release.txt
+        echo "- UBoot version: ${UBOOT_VERSION}" >> release.txt
+        echo "- Build time: ${BUILD_TIME}" >> release.txt
+        echo "" >> release.txt
+        echo "### MD5" >> release.txt
+        cat checksum >> release.txt
+
+        # Pass the path information out
+        echo "FIRMWARE_PATH=$PWD" >> $GITHUB_ENV
+        echo "status=success" >> $GITHUB_OUTPUT
+
+    - name: Upload firmware to release
+      uses: softprops/action-gh-release@master
+      if: steps.release.outputs.status == 'success' && !cancelled()
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ steps.release.outputs.release_tag }}
+        name: ${{ steps.release.outputs.release_tag }}
+        body_path: ${{ env.FIRMWARE_PATH }}/release.txt
+        files: |
+          ${{ env.FIRMWARE_PATH }}/*.bin
