@@ -37,13 +37,14 @@ jobs:
       - name: Append custom device definition
         run: |
           cd bl-mt798x
-          # Copying your specific PanelLan defconfig and dts files
+
+          # 1. Copy the U-Boot files (keep the multi_layout name here, because U-Boot expects it)
           cp ../uboot-mod/mt7981_panellan_zx7981pd_multi_layout_defconfig ./uboot-mtk-20230718-09eda825/configs/
           cp ../uboot-mod/mt7981-panellan-zx7981pd.dts ./uboot-mtk-20230718-09eda825/arch/arm/dts/
           cp ../uboot-mod/index.html ./uboot-mtk-20230718-09eda825/failsafe/fsdata/index.html
 
-          # 2. Generate the missing ATF (BL2) config with the correct FIP offset for ZX7981PD
-          cat <<EOF > ./atf-20240117-bacca82a8/configs/mt7981_panellan_zx7981pd_multi_layout_defconfig
+          # 2. Generate the ATF (BL2) config using the standard base name
+          cat <<EOF > ./atf-20240117-bacca82a8/configs/mt7981_panellan_zx7981pd_defconfig
           _PLAT_MT7981=y
           _MT7981_BOARD_BGA=y
           _ENABLE_OVERRIDE_FIP_BASE=y
@@ -56,8 +57,10 @@ jobs:
         id: compile
         run: |
           cd bl-mt798x
-          # The BOARD variable maps exactly to your defconfig naming scheme
-          SOC=mt7981 BOARD=panellan_zx7981pd_multi_layout MULTI_LAYOUT=1 ./build.sh
+
+          # Use the base board name. MULTI_LAYOUT=1 will automatically build the correct suffixes!
+          SOC=mt7981 BOARD=panellan_zx7981pd MULTI_LAYOUT=1 ./build.sh
+
           if ls output/*.bin >/dev/null 2>&1;
           then
             echo "status=success" >> $GITHUB_OUTPUT
