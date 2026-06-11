@@ -24,20 +24,20 @@
 
 	mtd-layout {
 		layout@0 {
-            label = "Stock_Single_Boot";
+            label = "stock_single_boot_128M";
             mtdids = "nmbm0=nmbm0";
             mtdparts = "nmbm0:1024k(bl2),512k(u-boot-env),2048k(factory),2048k(fip),64m(ubi)";
         };
 
 		layout@1 {
-			label = "Stock_Dual_Boot_128M";
+			label = "stock_dual_boot_128M";
 			mtdids = "nmbm0=nmbm0";
 			/* This perfectly matches your original PanelLan factory layout */
 			mtdparts = "nmbm0:1024k(bl2),512k(u-boot-env),2048k(Factory),2048k(fip),640k(woem),57344k(ubi),57344k(ubi2),384k(wtinfo),384k(nvram)";
 		};
 
 		layout@2 {
-			label = "OpenWrt_Single_Boot_Dynamic_Size";
+			label = "single_boot_dynamic_size";
 			mtdids = "nmbm0=nmbm0";
 			/* The minus sign automatically fills the rest of your 256M/512M chip! */
 			mtdparts = "nmbm0:1024k(bl2),512k(u-boot-env),2048k(Factory),2048k(fip),-(ubi)";
