@@ -24,21 +24,23 @@
 
 	mtd-layout {
 		layout@0 {
-			label = "128M_Single_Boot";
-			mtdids = "nmbm0=nmbm0";
-			mtdparts = "nmbm0:1024k(bl2),512k(u-boot-env),2048k(Factory),2048k(fip),640k(woem),384k(wtinfo),384k(nvram),124032k(ubi)";
-		};
+            label = "Stock_Single_Boot";
+            mtdids = "nmbm0=nmbm0";
+            mtdparts = "nmbm0:1024k(bl2),512k(u-boot-env),2048k(factory),2048k(fip),64m(ubi)";
+        };
 
 		layout@1 {
-			label = "256M_Single_Boot";
+			label = "Stock_Dual_Boot_128M";
 			mtdids = "nmbm0=nmbm0";
-			mtdparts = "nmbm0:1024k(bl2),512k(u-boot-env),2048k(Factory),2048k(fip),640k(woem),384k(wtinfo),384k(nvram),255104k(ubi)";
+			/* This perfectly matches your original PanelLan factory layout */
+			mtdparts = "nmbm0:1024k(bl2),512k(u-boot-env),2048k(Factory),2048k(fip),640k(woem),57344k(ubi),57344k(ubi2),384k(wtinfo),384k(nvram)";
 		};
 
 		layout@2 {
-			label = "512M_Single_Boot";
+			label = "OpenWrt_Single_Boot_Dynamic_Size";
 			mtdids = "nmbm0=nmbm0";
-			mtdparts = "nmbm0:1024k(bl2),512k(u-boot-env),2048k(Factory),2048k(fip),640k(woem),384k(wtinfo),384k(nvram),517248k(ubi)";
+			/* The minus sign automatically fills the rest of your 256M/512M chip! */
+			mtdparts = "nmbm0:1024k(bl2),512k(u-boot-env),2048k(Factory),2048k(fip),-(ubi)";
 		};
 	};
 
