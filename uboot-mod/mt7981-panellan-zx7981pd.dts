@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 /dts-v1/;
+
 #include "mt7981.dtsi"
 #include <dt-bindings/gpio/gpio.h>
-#include <dt-bindings/input/linux-event-codes.h>
+#include <dt-bindings/input/input.h>
 
 / {
 	#address-cells = <1>;
 	#size-cells = <1>;
-	model = "zx7981pd";
-	compatible = "mediatek,mt7981", "mediatek,mt7981-rfb";
+	model = "PanelLan ZX7981PD";
+	compatible = "panellan,zx7981pd", "panellan,zx7981pde", "mediatek,mt7981";
 
 	chosen {
 		stdout-path = &uart0;
@@ -18,30 +19,8 @@
 
 	config {
 		bootcmd = "mtkboardboot";
-		blink_led = "lede:blue:blue";
-		system_led = "lede:blue:red";
-	};
-
-	mtd-layout {
-		layout@0 {
-            label = "stock_single_boot_128M";
-            mtdids = "nmbm0=nmbm0";
-            mtdparts = "nmbm0:1024k(bl2),512k(u-boot-env),2048k(factory),2048k(fip),64m(ubi)";
-        };
-
-		layout@1 {
-			label = "stock_dual_boot_128M";
-			mtdids = "nmbm0=nmbm0";
-			/* This perfectly matches your original PanelLan factory layout */
-			mtdparts = "nmbm0:1024k(bl2),512k(u-boot-env),2048k(Factory),2048k(fip),640k(woem),57344k(ubi),57344k(ubi2),384k(wtinfo),384k(nvram)";
-		};
-
-		layout@2 {
-			label = "single_boot_dynamic_size";
-			mtdids = "nmbm0=nmbm0";
-			/* The minus sign automatically fills the rest of your 256M/512M chip! */
-			mtdparts = "nmbm0:1024k(bl2),512k(u-boot-env),2048k(Factory),2048k(fip),-(ubi)";
-		};
+		sys_led = "red:system";
+		failsafe_led = "blue:system";
 	};
 
 	memory@40000000 {
@@ -52,33 +31,54 @@
 	gpio-keys {
 		compatible = "gpio-keys";
 
-		button-reset {
+		reset {
 			label = "reset";
+			gpios = <&pio 1 GPIO_ACTIVE_LOW>;
 			linux,code = <KEY_RESTART>;
-			gpios = <&gpio 1 GPIO_ACTIVE_LOW>;
 		};
 
-		button-wps {
+		wps {
 			label = "wps";
+			gpios = <&pio 0 GPIO_ACTIVE_LOW>;
 			linux,code = <KEY_WPS_BUTTON>;
-			gpios = <&gpio 0 GPIO_ACTIVE_LOW>;
 		};
 	};
 
 	gpio-leds {
 		compatible = "gpio-leds";
-
-		led_status: led-0 {
-			label = "lede:blue:red";
-			gpios = <&gpio 6 GPIO_ACTIVE_HIGH>;
+		system_blue {
+			label = "blue:system";
+			gpios = <&pio 5 0>;
+			default-state = "off";
 		};
-
-		led-1 {
-			label = "lede:blue:blue";
-			gpios = <&gpio 5 GPIO_ACTIVE_HIGH>;
+		system_red {
+			label = "red:system";
+			gpios = <&pio 6 0>;
+			default-state = "on";
 		};
 	};
 
+	mtd-layout {
+		layout@0 {
+			label = "Stock_Dual_Boot (Original PanelLan)";
+			mtdids = "nmbm0=nmbm0";
+			/* Exact match to the manufacturer's partition table */
+			mtdparts = "nmbm0:1024k(bl2),512k(u-boot-env),2048k(Factory),2048k(FIP),640k(woem),57344k(ubi),57344k(ubi2),384k(wtinfo),384k(nvram)";
+		};
+
+		layout@1 {
+			label = "Single_Boot (128MB)";
+			mtdids = "nmbm0=nmbm0";
+			mtdparts = "nmbm0:1024k(bl2),512k(u-boot-env),2048k(Factory),2048k(FIP),115328k(ubi),384k(wtinfo),384k(nvram)";
+		};
+
+		layout@2 {
+			label = "Single_Boot (256/512MB)";
+			mtdids = "nmbm0=nmbm0";
+			mtdparts = "nmbm0:1024k(bl2),512k(u-boot-env),2048k(Factory),2048k(FIP),384k(wtinfo),384k(nvram),-(ubi)";
+		};
+	};
+	
 	bl2_verify {
 		bl2_compatible = "spim-nand";
 	};
@@ -86,16 +86,16 @@
 
 &eth {
 	status = "okay";
-	mediatek,gmac-id = <1>;
-	phy-mode = "gmii";
-	phy-handle = <&phy0>;
+	mediatek,gmac-id = <0>;
+	phy-mode = "2500base-x";
+	mediatek,switch = "mt7531";
+	reset-gpios = <&pio 39 GPIO_ACTIVE_HIGH>;
 
-	mdio {
-		phy0: ethernet-phy@0 {
-			compatible = "ethernet-phy-ieee802.3-c22";
-			reg = <0x0>;
-			phy-mode = "gmii";
-		};
+	/* Forces the MT7531 switch into dumb mode for U-Boot Recovery */
+	fixed-link {
+		speed = <2500>;
+		full-duplex;
+		pause;
 	};
 };
 
@@ -121,8 +121,6 @@
 };
 
 &spi0 {
-	#address-cells = <1>;
-	#size-cells = <0>;
 	pinctrl-names = "default";
 	pinctrl-0 = <&spi_flash_pins>;
 	status = "okay";
@@ -135,9 +133,13 @@
 	sample_sel = <0>;
 
 	spi_nand@0 {
+		#address-cells = <1>;
+		#size-cells = <1>;
 		compatible = "spi-nand";
 		reg = <0>;
 		spi-max-frequency = <52000000>;
+		spi-tx-bus-width = <4>;
+		spi-rx-bus-width = <4>;
 	};
 };
 
