@@ -28,36 +28,6 @@
 		reg = <0x40000000 0x20000000>;
 	};
 
-	gpio-keys {
-		compatible = "gpio-keys";
-
-		reset {
-			label = "reset";
-			gpios = <&pio 1 GPIO_ACTIVE_LOW>;
-			linux,code = <KEY_RESTART>;
-		};
-
-		wps {
-			label = "wps";
-			gpios = <&pio 0 GPIO_ACTIVE_LOW>;
-			linux,code = <KEY_WPS_BUTTON>;
-		};
-	};
-
-	gpio-leds {
-		compatible = "gpio-leds";
-		system_blue {
-			label = "blue:system";
-			gpios = <&pio 5 0>;
-			default-state = "off";
-		};
-		system_red {
-			label = "red:system";
-			gpios = <&pio 6 0>;
-			default-state = "on";
-		};
-	};
-
 	mtd-layout {
 		layout@0 {
 			label = "Stock_Dual_Boot (Original PanelLan)";
@@ -78,6 +48,38 @@
 			mtdparts = "nmbm0:1024k(bl2),512k(u-boot-env),2048k(Factory),2048k(FIP),384k(wtinfo),384k(nvram),-(ubi)";
 		};
 	};
+
+	gpio-keys {
+		compatible = "gpio-keys";
+
+		reset {
+			label = "reset";
+			gpios = <&gpio 1 GPIO_ACTIVE_LOW>;
+			linux,code = <KEY_RESTART>;
+		};
+
+		wps {
+			label = "wps";
+			gpios = <&gpio 0 GPIO_ACTIVE_LOW>;
+			linux,code = <KEY_WPS_BUTTON>;
+		};
+	};
+
+	gpio-leds {
+		compatible = "gpio-leds";
+
+		led-0 {
+			label = "blue:system";
+			gpios = <&gpio 5 GPIO_ACTIVE_LOW>;
+			default-state = "off";
+		};
+
+		led-1 {
+			label = "red:system";
+			gpios = <&gpio 6 GPIO_ACTIVE_LOW>;
+			default-state = "on";
+		};
+	};
 	
 	bl2_verify {
 		bl2_compatible = "spim-nand";
@@ -89,7 +91,7 @@
 	mediatek,gmac-id = <0>;
 	phy-mode = "2500base-x";
 	mediatek,switch = "mt7531";
-	reset-gpios = <&pio 39 GPIO_ACTIVE_HIGH>;
+	reset-gpios = <&gpio 39 GPIO_ACTIVE_HIGH>;
 
 	/* Forces the MT7531 switch into dumb mode for U-Boot Recovery */
 	fixed-link {
